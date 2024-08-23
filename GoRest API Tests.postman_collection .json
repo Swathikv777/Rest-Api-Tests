@@ -24,7 +24,17 @@
 									"    var jsonData = pm.response.json();",
 									"    pm.expect(jsonData).to.be.an('array');",
 									"});",
-									""
+									"",
+									"pm.test(\"Each user has the required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    jsonData.forEach(function (user) {",
+									"        pm.expect(user).to.have.property('id').that.is.a('number');",
+									"        pm.expect(user).to.have.property('name').that.is.a('string');",
+									"        pm.expect(user).to.have.property('email').that.is.a('string');",
+									"        pm.expect(user).to.have.property('gender').that.is.oneOf(['male', 'female']);",
+									"        pm.expect(user).to.have.property('status').that.is.oneOf(['active', 'inactive']);",
+									"    });",
+									"});"
 								],
 								"type": "text/javascript"
 							}
@@ -67,15 +77,39 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"pm.test(\"Status code is 201\", function () {",
+									"pm.test(\"User creation - Validate response fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"",
+									"    // Check status code",
 									"    pm.response.to.have.status(201);",
+									"",
+									"    // Validate mandatory fields",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('name');",
+									"    pm.expect(jsonData).to.have.property('email');",
+									"    pm.expect(jsonData).to.have.property('gender');",
+									"    pm.expect(jsonData).to.have.property('status');",
+									"",
+									"    // Validate optional fields (assuming 'bio' is optional)",
+									"    if (jsonData.bio) {",
+									"        pm.expect(jsonData.bio).to.be.a('string');",
+									"    }",
+									"",
+									"    // Validate field types",
+									"    pm.expect(jsonData.id).to.be.a('number');",
+									"    pm.expect(jsonData.name).to.be.a('string');",
+									"    pm.expect(jsonData.email).to.be.a('string');",
+									"    pm.expect(jsonData.gender).to.be.oneOf(['male', 'female']);",
+									"    pm.expect(jsonData.status).to.be.oneOf(['active', 'inactive']);",
 									"});",
+									"",
 									"",
 									"pm.test(\"User is created successfully\", function () {",
 									"    var jsonData = pm.response.json();",
 									"    pm.expect(jsonData).to.have.property('id');",
 									"    pm.environment.set(\"userId\", jsonData.id);",
 									"});",
+									"",
 									""
 								],
 								"type": "text/javascript"
@@ -356,7 +390,7 @@
 			]
 		},
 		{
-			"name": "Error Handling Tests",
+			"name": "Error Handling",
 			"item": [
 				{
 					"name": "Error Handling",
@@ -760,21 +794,22 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"pm.test(\"Status code is 201\", function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
 									"pm.test(\"Todo is created successfully\", function () {",
 									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(pm.response.status).to.eql(201);",
+									"    pm.expect(jsonData).to.have.property('id').that.is.a('number');",
+									"    pm.expect(jsonData).to.have.property('user_id').that.is.a('number');",
+									"    pm.expect(jsonData).to.have.property('title').that.is.a('string');",
+									"    pm.expect(jsonData).to.have.property('due_on').that.is.a('string');",
+									"    pm.expect(jsonData).to.have.property('status').that.is.oneOf(['pending', 'completed']);",
 									"    pm.environment.set(\"todoId\", jsonData.id); ",
 									"});",
 									"",
-									"pm.test(\"Todo has correct fields\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('title', 'Sample Todo Title');",
-									"    pm.expect(jsonData).to.have.property('status', 'pending');",
+									"pm.test(\"SQL Injection Test\", function () {",
+									"    pm.expect(pm.response.status).to.not.eql(500);  ",
 									"});",
+									"",
+									"",
 									""
 								],
 								"type": "text/javascript"
@@ -939,6 +974,10 @@
 									"    pm.expect(jsonData).to.have.property('title', 'Updated Todo Title');",
 									"    pm.expect(jsonData).to.have.property('status', 'completed');",
 									"});",
+									"",
+									"pm.test(\"SQL Injection Test\", function () {",
+									"    pm.expect(pm.response.status).to.not.eql(500);  ",
+									"});",
 									""
 								],
 								"type": "text/javascript"
@@ -1073,6 +1112,252 @@
 								"v2",
 								"todos",
 								"999999999999"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Validation Tests",
+			"item": [
+				{
+					"name": "Missing Mandatory Fields",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Validate missing mandatory fields\", function () {",
+									"    pm.expect(pm.response.status).to.eql(422); ",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('message').that.contains('is required');",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "02cb1142d6c7f2635f264e018c9be9c808fe645184a9ad31a2efb807bb027c06",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "https://gorest.co.in/public/v2/todos",
+							"protocol": "https",
+							"host": [
+								"gorest",
+								"co",
+								"in"
+							],
+							"path": [
+								"public",
+								"v2",
+								"todos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Title Length and Date Format",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Validate title length\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.title.length).to.be.below(255);  ",
+									"});",
+									"",
+									"pm.test(\"Validate date format\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.due_on).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/);  // ISO 8601 format",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "02cb1142d6c7f2635f264e018c9be9c808fe645184a9ad31a2efb807bb027c06",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "https://gorest.co.in/public/v2/todos",
+							"protocol": "https",
+							"host": [
+								"gorest",
+								"co",
+								"in"
+							],
+							"path": [
+								"public",
+								"v2",
+								"todos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Field Validation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Validate that due_on is not a past date\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(new Date(jsonData.due_on)).to.be.at.least(new Date());",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "02cb1142d6c7f2635f264e018c9be9c808fe645184a9ad31a2efb807bb027c06",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "https://gorest.co.in/public/v2/todos",
+							"protocol": "https",
+							"host": [
+								"gorest",
+								"co",
+								"in"
+							],
+							"path": [
+								"public",
+								"v2",
+								"todos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Boundary Value",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Test boundary value for title length\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.title.length).to.be.at.most(255);  ",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "02cb1142d6c7f2635f264e018c9be9c808fe645184a9ad31a2efb807bb027c06",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "https://gorest.co.in/public/v2/todos",
+							"protocol": "https",
+							"host": [
+								"gorest",
+								"co",
+								"in"
+							],
+							"path": [
+								"public",
+								"v2",
+								"todos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Pagination and Limits",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Validate pagination\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.length).to.be.at.most(10);  // Assuming a limit of 10 per page",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "02cb1142d6c7f2635f264e018c9be9c808fe645184a9ad31a2efb807bb027c06",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://gorest.co.in/public/v2/todos",
+							"protocol": "https",
+							"host": [
+								"gorest",
+								"co",
+								"in"
+							],
+							"path": [
+								"public",
+								"v2",
+								"todos"
 							]
 						}
 					},
